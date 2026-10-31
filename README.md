@@ -49,6 +49,11 @@ Los mismos controles corren solos en GitHub cada vez que se sube un cambio.
 1. Creá una cuenta en [supabase.com](https://supabase.com) y un proyecto llamado `navaja-dev` (para pruebas). Más adelante vamos a crear `navaja-prod` para los datos reales.
 2. Región: elegí **South America (São Paulo)**, la más cercana.
 3. En el proyecto: **Project Settings → API Keys**. Copiá la **Project URL** y la **Publishable key** a tu `.env.local`.
+4. Para crear las tablas: en Supabase abrí **SQL Editor**, pegá el contenido de cada archivo de `supabase/migrations/` (en orden, del número más chico al más grande) y apretá **Run**.
+
+## Cómo se prueba la base de datos
+
+Los tests de `tests/db/` levantan una base Postgres de prueba dentro de la misma compu (con PGlite), le aplican las migraciones y verifican que cada usuario vea solo lo que le corresponde. No necesitan cuenta de Supabase ni internet.
 
 ## Publicarlo
 
