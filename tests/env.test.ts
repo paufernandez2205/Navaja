@@ -1,5 +1,27 @@
 import { describe, expect, test } from "vitest";
-import { readPublicEnv } from "@/lib/env";
+import { readPublicEnv, readServerEnv } from "@/lib/env";
+
+describe("readServerEnv", () => {
+  const secret = "x".repeat(32);
+
+  test("usa APP_URL si está", () => {
+    expect(
+      readServerEnv({ APP_URL: "https://a.com", URL: "https://b.com", PHONE_HMAC_SECRET: secret }),
+    ).toEqual({ appUrl: "https://a.com", phoneHmacSecret: secret });
+  });
+
+  test("si no, usa la URL que pone Netlify", () => {
+    expect(readServerEnv({ URL: "https://b.com", PHONE_HMAC_SECRET: secret }).appUrl).toBe(
+      "https://b.com",
+    );
+  });
+
+  test("exige un secreto de al menos 32 caracteres", () => {
+    expect(() => readServerEnv({ APP_URL: "https://a.com", PHONE_HMAC_SECRET: "corto" })).toThrow(
+      /PHONE_HMAC_SECRET/,
+    );
+  });
+});
 
 describe("readPublicEnv", () => {
   test("devuelve las variables cuando están bien", () => {
