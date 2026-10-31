@@ -2,7 +2,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { as, createTestDb } from "./helpers";
-import { AP, BR, L, R, T, U, seed } from "./seed";
+import { AP, BR, L, R, T, U, id, seed } from "./seed";
 
 let db: PGlite;
 
@@ -182,7 +182,16 @@ describe("teléfonos", () => {
 });
 
 describe("reglas de las calificaciones", () => {
-  const insertRating = (stars: number, comment: string | null = null, appt = AP.A1open) =>
+  const DONE = id(80); // completado y sin calificar
+
+  beforeAll(async () => {
+    await db.exec(`
+      insert into public.appointments (id, tenant_id, location_id, barber_id, scheduled_at, status, completed_at)
+      values ('${DONE}', '${T.A}', '${L.A1}', '${BR.A}', now(), 'completed', now());
+    `);
+  });
+
+  const insertRating = (stars: number, comment: string | null = null, appt = DONE) =>
     db.query(
       `insert into public.ratings (appointment_id, tenant_id, location_id, barber_id, stars, comment)
        values ($1, '${T.A}', '${L.A1}', '${BR.A}', $2, $3)`,
@@ -209,9 +218,15 @@ describe("reglas de las calificaciones", () => {
     await expect(
       db.query(
         `insert into public.ratings (appointment_id, tenant_id, location_id, barber_id, stars)
-         values ('${AP.A1open}', '${T.A}', '${L.A2}', '${BR.A}', 5)`,
+         values ('${DONE}', '${T.A}', '${L.A2}', '${BR.A}', 5)`,
       ),
     ).rejects.toThrow(/foreign key/);
+  });
+
+  test("solo se califican turnos completados", async () => {
+    await expect(insertRating(5, null, AP.A1open)).rejects.toThrow(
+      "Solo se califican turnos completados",
+    );
   });
 
   test("un turno completado necesita fecha de finalización", async () => {

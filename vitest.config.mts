@@ -7,5 +7,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["tests/**/*.test.{ts,tsx}"],
+    // Levantar Postgres (PGlite) la primera vez en cada archivo tarda unos segundos.
+    hookTimeout: 60_000,
   },
 });

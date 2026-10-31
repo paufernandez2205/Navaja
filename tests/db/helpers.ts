@@ -5,8 +5,11 @@ import { PGlite } from "@electric-sql/pglite";
 const root = join(__dirname, "..", "..");
 const migrationsDir = join(root, "supabase", "migrations");
 
-// Base Postgres en memoria con todas las migraciones aplicadas en orden.
-export async function createTestDb(): Promise<PGlite> {
+// Se arma una sola vez por archivo de tests: base con todas las migraciones.
+// Cada test arranca de una copia, que es mucho más rápido que migrar de cero.
+let template: Promise<File | Blob> | undefined;
+
+async function buildTemplate(): Promise<File | Blob> {
   const db = new PGlite();
   await db.exec(readFileSync(join(__dirname, "supabase-shim.sql"), "utf8"));
   const files = readdirSync(migrationsDir)
@@ -15,7 +18,15 @@ export async function createTestDb(): Promise<PGlite> {
   for (const file of files) {
     await db.exec(readFileSync(join(migrationsDir, file), "utf8"));
   }
-  return db;
+  const dump = await db.dumpDataDir("none");
+  await db.close();
+  return dump;
+}
+
+// Base Postgres en memoria con todas las migraciones aplicadas en orden.
+export async function createTestDb(): Promise<PGlite> {
+  template ??= buildTemplate();
+  return PGlite.create({ loadDataDir: await template });
 }
 
 // Ejecuta fn como si fuera un usuario logueado (o anónimo si userId es null),
