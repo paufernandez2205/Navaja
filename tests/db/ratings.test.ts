@@ -46,7 +46,12 @@ describe("abrir el link", () => {
   test("un link válido muestra local y barbero, sin datos del cliente", async () => {
     const res = await context(H.valid);
     expect(res.rows).toEqual([
-      { location_name: "Local A1", barber_name: "Barbero A", barber_photo_url: null },
+      {
+        location_name: "Local A1",
+        barber_name: "Barbero A",
+        barber_photo_url: null,
+        has_google_review: true,
+      },
     ]);
   });
 

@@ -63,13 +63,13 @@ $$;
 
 -- Lo que muestra la pantalla del cliente: local y barbero. Sin datos personales.
 create function public.get_rating_context(p_token_hash text)
-returns table (location_name text, barber_name text, barber_photo_url text)
+returns table (location_name text, barber_name text, barber_photo_url text, has_google_review boolean)
 language plpgsql stable security definer set search_path = '' as $$
 declare
   v_appointment_id uuid := private.valid_token_appointment(p_token_hash, false);
 begin
   return query
-    select l.name, b.name, b.photo_url
+    select l.name, b.name, b.photo_url, l.google_review_url is not null
     from public.appointments a
     join public.locations l on l.id = a.location_id
     join public.barbers b on b.id = a.barber_id
