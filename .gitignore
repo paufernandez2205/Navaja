@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# archivos armados para pegar en el SQL Editor de Supabase
+/para-supabase/
