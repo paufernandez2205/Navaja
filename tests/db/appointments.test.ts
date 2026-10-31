@@ -126,6 +126,61 @@ describe("estados del turno", () => {
     });
   });
 
+  const create = (location: string, phone: string | null, walkIn: boolean) =>
+    db.query<{ id: string }>(
+      "select public.create_appointment($1, $2, now() + interval '1 hour', $3, $4, $5) as id",
+      [location, BR.A, phone, phone ? "d".repeat(64) : null, walkIn],
+    );
+
+  test("create_appointment guarda turno y teléfono juntos", async () => {
+    await as(db, U.staffA1, async () => {
+      const apptId = (await create(L.A1, "+5491155555555", false)).rows[0].id;
+      const res = await db.query<{ status: string; phone_e164: string }>(
+        `select a.status, c.phone_e164 from public.appointments a
+         join public.appointment_contacts c on c.appointment_id = a.id where a.id = $1`,
+        [apptId],
+      );
+      expect(res.rows).toEqual([{ status: "scheduled", phone_e164: "+5491155555555" }]);
+    });
+  });
+
+  test("create_appointment: un walk-in queda completado y puede no tener teléfono", async () => {
+    await as(db, U.staffA1, async () => {
+      const apptId = (await create(L.A1, null, true)).rows[0].id;
+      const res = await db.query<{ status: string; is_walk_in: boolean }>(
+        "select status, is_walk_in from public.appointments where id = $1",
+        [apptId],
+      );
+      expect(res.rows).toEqual([{ status: "completed", is_walk_in: true }]);
+    });
+  });
+
+  test("create_appointment exige teléfono en un turno agendado", async () => {
+    await as(db, U.staffA1, async () => {
+      await expect(create(L.A1, null, false)).rejects.toThrow("Falta el teléfono del cliente");
+    });
+  });
+
+  test("create_appointment respeta los permisos: no carga en otro local", async () => {
+    await as(db, U.staffA1, async () => {
+      // Recepción ni siquiera ve el local A2, así que para ella "no existe".
+      await expect(create(L.A2, "+5491155555555", false)).rejects.toThrow(
+        /Local inexistente|row-level security/,
+      );
+    });
+  });
+
+  test("create_appointment: si el teléfono es inválido no queda el turno a medias", async () => {
+    await as(db, U.staffA1, async () => {
+      await expect(create(L.A1, "123", false)).rejects.toThrow(/check constraint/);
+    });
+    const res = await db.query<{ n: number }>(
+      "select count(*)::int as n from public.appointments where location_id = $1",
+      [L.A1],
+    );
+    expect(res.rows[0].n).toBe(3);
+  });
+
   test("recepción registra un walk-in completado con su teléfono", async () => {
     await as(db, U.staffA1, async () => {
       const res = await db.query<{ id: string }>(
